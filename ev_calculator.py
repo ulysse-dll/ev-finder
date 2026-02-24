@@ -193,53 +193,62 @@ def _find_vb_h2h(wm_events, ref_events, min_ev):
 
 
 def _find_vb_ou(wm_events, ref_events, min_ev):
-    """Trouve les value bets sur le marche Over/Under."""
+    """Trouve les value bets sur le marche Over/Under (tous seuils)."""
     value_bets = []
-    matches = match_events(wm_events, ref_events)
 
-    for wm_event, ref_event in matches:
-        wm_threshold = wm_event.get("market_threshold", 2.5)
-        ref_threshold = ref_event.get("market_threshold", 2.5)
+    # Grouper par seuil pour eviter qu'un O/U 1.5 WM matche un O/U 2.5 ref
+    wm_by_threshold = {}
+    for e in wm_events:
+        t = e.get("market_threshold", 2.5)
+        wm_by_threshold.setdefault(t, []).append(e)
 
-        # Ne matcher que si meme seuil
-        if wm_threshold != ref_threshold:
+    ref_by_threshold = {}
+    for e in ref_events:
+        t = e.get("market_threshold", 2.5)
+        ref_by_threshold.setdefault(t, []).append(e)
+
+    for threshold, wm_group in wm_by_threshold.items():
+        ref_group = ref_by_threshold.get(threshold, [])
+        if not ref_group:
             continue
 
-        ref_outcomes = devig_odds(ref_event.get("outcomes", []))
-        # Mapper: "over"/"under" -> fair_prob
-        fair_probs = {}
-        for o in ref_outcomes:
-            side = _normalize_ou_side(o["name"])
-            if side:
-                fair_probs[side] = o["fair_prob"]
+        matches = match_events(wm_group, ref_group)
 
-        for wm_outcome in wm_event.get("outcomes", []):
-            side = _normalize_ou_side(wm_outcome["name"])
-            if side not in fair_probs:
-                continue
+        for wm_event, ref_event in matches:
+            ref_outcomes = devig_odds(ref_event.get("outcomes", []))
+            fair_probs = {}
+            for o in ref_outcomes:
+                side = _normalize_ou_side(o["name"])
+                if side:
+                    fair_probs[side] = o["fair_prob"]
 
-            wm_odds = wm_outcome["odds"]
-            best_prob = fair_probs[side]
-            ev = calculate_ev(wm_odds, best_prob)
+            for wm_outcome in wm_event.get("outcomes", []):
+                side = _normalize_ou_side(wm_outcome["name"])
+                if side not in fair_probs:
+                    continue
 
-            if ev > min_ev and ev < 50:
-                value_bets.append({
-                    "sport": wm_event.get("sport", ref_event.get("sport_title", "?")),
-                    "home": wm_event.get("home", ref_event.get("home_team", "")),
-                    "away": wm_event.get("away", ref_event.get("away_team", "")),
-                    "market": f"over_under_{wm_threshold}",
-                    "market_type": "over_under",
-                    "market_threshold": wm_threshold,
-                    "bet_on": wm_outcome["name"],
-                    "winamax_odds": wm_odds,
-                    "fair_prob": round(best_prob * 100, 1),
-                    "implied_prob": round(implied_probability(wm_odds) * 100, 1),
-                    "ev_percent": ev,
-                    "commence_time": ref_event.get("commence_time", ""),
-                    "num_books": ref_event.get("num_books", 1),
-                    "match_id": wm_event.get("match_id", ""),
-                    "start_time": wm_event.get("start_time", 0),
-                })
+                wm_odds = wm_outcome["odds"]
+                best_prob = fair_probs[side]
+                ev = calculate_ev(wm_odds, best_prob)
+
+                if ev > min_ev and ev < 50:
+                    value_bets.append({
+                        "sport": wm_event.get("sport", ref_event.get("sport_title", "?")),
+                        "home": wm_event.get("home", ref_event.get("home_team", "")),
+                        "away": wm_event.get("away", ref_event.get("away_team", "")),
+                        "market": f"over_under_{threshold}",
+                        "market_type": "over_under",
+                        "market_threshold": threshold,
+                        "bet_on": wm_outcome["name"],
+                        "winamax_odds": wm_odds,
+                        "fair_prob": round(best_prob * 100, 1),
+                        "implied_prob": round(implied_probability(wm_odds) * 100, 1),
+                        "ev_percent": ev,
+                        "commence_time": ref_event.get("commence_time", ""),
+                        "num_books": ref_event.get("num_books", 1),
+                        "match_id": wm_event.get("match_id", ""),
+                        "start_time": wm_event.get("start_time", 0),
+                    })
 
     return value_bets
 

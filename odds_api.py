@@ -238,7 +238,8 @@ def get_available_sports():
 def _scrape_oddsportal_ou_page(url, sport_name, threshold=2.5):
     """
     Scrape l'onglet Over/Under d'une page Oddsportal football.
-    Navigue vers {url}#over-under;2 et extrait les cotes O/U 2.5.
+    Navigue vers {url}#over-under;2, clique sur le seuil voulu (1.5/2.5/3.5),
+    puis extrait les cotes Over/Under.
 
     Retourne une liste d'events avec market_type="over_under".
     """
@@ -249,19 +250,38 @@ def _scrape_oddsportal_ou_page(url, sport_name, threshold=2.5):
     # Oddsportal charge l'onglet O/U via le hash fragment
     ou_url = url.rstrip("/") + "/#over-under;2"
     events = []
+    threshold_label = str(threshold)  # "1.5", "2.5", "3.5"
 
     try:
         driver.get(ou_url)
         time.sleep(5)
 
-        # Tenter de cliquer sur l'onglet "Over/Under" si non chargé automatiquement
+        # Cliquer sur l'onglet "Over/Under" principal si besoin
         try:
             from selenium.webdriver.common.by import By
             tabs = driver.find_elements(By.XPATH,
                 "//*[contains(text(),'Over/Under') or contains(text(),'Goals') or contains(text(),'Buts')]")
             if tabs:
                 tabs[0].click()
-                time.sleep(3)
+                time.sleep(2)
+        except Exception:
+            pass
+
+        # Cliquer sur le seuil specifique (1.5 / 2.5 / 3.5)
+        try:
+            clicked = driver.execute_script(f"""
+                const label = '{threshold_label}';
+                const candidates = Array.from(document.querySelectorAll(
+                    'button, [role="tab"], [class*="tab"], [class*="filter"], [class*="btn"], a, li, span'
+                ));
+                const target = candidates.find(el =>
+                    el.children.length === 0 && el.innerText.trim() === label
+                );
+                if (target) {{ target.click(); return true; }}
+                return false;
+            """)
+            if clicked:
+                time.sleep(2)
         except Exception:
             pass
 
@@ -440,11 +460,12 @@ def get_reference_odds(sport_key, markets="h2h"):
             all_events.extend(events)
             time.sleep(1)
 
-        # Over/Under (football seulement)
+        # Over/Under (football seulement) — seuils 1.5, 2.5, 3.5
         if markets in ("over_under", "all") and base_key == "soccer":
-            events = _scrape_oddsportal_ou_page(url, sport_name, threshold=2.5)
-            all_events.extend(events)
-            time.sleep(1)
+            for threshold in [1.5, 2.5, 3.5]:
+                events = _scrape_oddsportal_ou_page(url, sport_name, threshold=threshold)
+                all_events.extend(events)
+                time.sleep(1)
 
         # BTTS (football seulement)
         if markets in ("btts", "all") and base_key == "soccer":
