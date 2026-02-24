@@ -139,6 +139,12 @@ ev-finder/
 
 ---
 
+## ⚠️ Work in Progress
+
+This project is **actively under development**. Scrapers may break when sites update their structure, odds matching can miss games, and settlement logic is not yet battle-tested across all markets. Expect bugs.
+
+**Do not use this tool as your sole basis for betting decisions.** The EV signals are only as reliable as the scraped data — if Oddsportal returns stale or incomplete odds, the calculation is off. Always cross-check manually before placing real money.
+
 ## Disclaimer
 
 This tool is built for educational purposes and statistical analysis.
