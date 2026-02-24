@@ -4,7 +4,7 @@
 MIN_EV_THRESHOLD = 0.0
 
 # Cache duree en secondes
-CACHE_DURATION = 120
+CACHE_DURATION = 600
 
 # Flask
 FLASK_HOST = "0.0.0.0"
@@ -22,5 +22,5 @@ KELLY_FRACTION = 0.25           # Quarter Kelly (conservateur)
 MAX_STAKE_PERCENT = 0.05        # Max 5% du bankroll par pari
 MIN_STAKE = 0.10                # Mise minimum en EUR
 MIN_EV_TO_BET = 1.0             # EV% minimum pour placer un pari
-MIN_BOOKS_TO_BET = 3            # Minimum de bookmakers dans le consensus
+MIN_BOOKS_TO_BET = 1            # Pinnacle seul suffit (plus fiable que consensus soft books)
 AUTO_BET = True                 # Placement automatique des paris

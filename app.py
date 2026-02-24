@@ -106,8 +106,10 @@ def _refresh_data():
             with _lock:
                 _cache["progress"] = 25 + int(60 * (idx / max(total_sports, 1)))
 
-            # Pour le football, recuperer aussi Over/Under et BTTS
-            markets_param = "all" if sport_key == "soccer" else "h2h"
+            # Note: O/U et BTTS via match pages Oddsportal ne fonctionnent pas
+            # (navigation SPA + fragment URL #over-under;2 inoperant en headless)
+            # Seul H2H via Betfair/Pinnacle est fiable pour l'instant.
+            markets_param = "h2h"
             ref_odds = get_reference_odds(sport_key, markets=markets_param)
             if ref_odds:
                 _log(f"{sport_label}: {len(ref_odds)} matchs de reference trouves")
