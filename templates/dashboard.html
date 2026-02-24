@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EV+ FINDER — Value Bets Winamax</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <div>
+                <div class="logo">EV+ FINDER</div>
+                <div class="logo-sub">Winamax Value Bet Scanner</div>
+            </div>
+        </div>
+        <div class="header-right">
+            <span class="last-update" id="lastUpdate">—</span>
+            <div class="status-badge">
+                <span class="status-dot" id="statusDot"></span>
+                <span id="statusText">Chargement...</span>
+            </div>
+            <button class="btn-refresh" id="btnRefresh" onclick="forceRefresh()">
+                REFRESH
+            </button>
+        </div>
+    </header>
+
+    <!-- Stats Bar -->
+    <div class="stats-bar">
+        <div class="stat-card">
+            <div class="stat-label">Value Bets</div>
+            <div class="stat-value green" id="statTotal">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">EV Moyen</div>
+            <div class="stat-value yellow" id="statAvgEv">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Evenements</div>
+            <div class="stat-value" id="statEvents">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Top Sport</div>
+            <div class="stat-value purple" id="statTopSport">—</div>
+        </div>
+    </div>
+
+    <!-- Info Banner -->
+    <div class="info-banner" id="infoBanner" style="display:none;"></div>
+
+    <!-- Scan Panel (progress + logs) -->
+    <div class="scan-panel" id="scanPanel" style="display:none;">
+        <div class="scan-header">
+            <div class="scan-title">
+                <span class="scan-icon">&#9881;</span>
+                SCAN EN COURS
+            </div>
+            <span class="scan-percent" id="scanPercent">0%</span>
+        </div>
+        <div class="progress-bar-container">
+            <div class="progress-bar-fill" id="progressBarFill" style="width:0%"></div>
+        </div>
+        <div class="scan-logs" id="scanLogs">
+            <div class="scan-log-entry waiting">En attente du demarrage...</div>
+        </div>
+    </div>
+
+    <!-- Bankroll Section -->
+    <div class="bankroll-section" id="bankrollSection">
+        <div class="bankroll-header">
+            <div class="bankroll-title">
+                <span class="section-icon">&#9733;</span>
+                BANKROLL TRACKER
+            </div>
+            <div class="bankroll-actions">
+                <button class="btn-settle" onclick="settleNow()">CHECK RESULTS</button>
+                <a class="btn-export" href="/api/bankroll/export" download>EXPORT CSV</a>
+                <button class="btn-reset" onclick="resetBankroll()">RESET</button>
+            </div>
+        </div>
+        <div class="bankroll-kpis">
+            <div class="kpi-card">
+                <div class="kpi-label">Solde Actuel</div>
+                <div class="kpi-value" id="kpiBankroll">100.00 &euro;</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">P/L Total</div>
+                <div class="kpi-value" id="kpiProfit">0.00 &euro;</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">ROI</div>
+                <div class="kpi-value" id="kpiRoi">0.0%</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Win Rate</div>
+                <div class="kpi-value" id="kpiWinRate">0.0%</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Paris Places</div>
+                <div class="kpi-value" id="kpiTotalBets">0</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">En Attente</div>
+                <div class="kpi-value yellow" id="kpiPending">0</div>
+            </div>
+        </div>
+        <div class="chart-container">
+            <div class="chart-title">Evolution du Profit / Loss</div>
+            <canvas id="plChart" width="800" height="200"></canvas>
+            <div class="chart-empty" id="chartEmpty">
+                Pas encore de paris resolus. Le graphique apparaitra apres le premier resultat.
+            </div>
+        </div>
+        <div class="ledger-container">
+            <div class="ledger-title">Paris en cours</div>
+            <div class="ledger-scroll">
+                <table class="ledger-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Match</th>
+                            <th>Pari</th>
+                            <th>Cote</th>
+                            <th>Mise</th>
+                            <th>EV</th>
+                            <th>Statut</th>
+                            <th>Retour potentiel</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ledgerPending"></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="ledger-container" style="margin-top:16px;">
+            <div class="ledger-title">Historique (terminés)</div>
+            <div class="ledger-scroll">
+                <table class="ledger-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Match</th>
+                            <th>Pari</th>
+                            <th>Cote</th>
+                            <th>Mise</th>
+                            <th>EV</th>
+                            <th>Statut</th>
+                            <th>P/L</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ledgerSettled"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Methodologie -->
+    <div class="methodo-section" id="methodoSection">
+        <div class="methodo-header" onclick="toggleMethodo()">
+            <div class="methodo-title">
+                <span class="section-icon">&#9432;</span>
+                COMMENT CA MARCHE
+            </div>
+            <span class="methodo-toggle" id="methodoToggle">&#9660;</span>
+        </div>
+        <div class="methodo-body" id="methodoBody" style="display:none;">
+
+            <div class="methodo-grid">
+
+                <div class="methodo-card">
+                    <div class="methodo-card-header">
+                        <span class="methodo-step">1</span>
+                        Scraping des cotes Winamax
+                    </div>
+                    <div class="methodo-card-body">
+                        <p>Un navigateur Chrome headless charge la page <strong>paris-sportifs Winamax</strong> et extrait automatiquement tous les evenements et leurs cotes en temps reel.</p>
+                        <p>Les donnees extraites incluent : <em>equipes, cotes decimales, marche (1X2), match ID, heure de debut</em>.</p>
+                        <div class="methodo-tag-row">
+                            <span class="methodo-tag">Selenium</span>
+                            <span class="methodo-tag">Chrome Headless</span>
+                            <span class="methodo-tag">PRELOADED_STATE</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="methodo-card">
+                    <div class="methodo-card-header">
+                        <span class="methodo-step">2</span>
+                        Cotes de reference (Oddsportal)
+                    </div>
+                    <div class="methodo-card-body">
+                        <p>Pour chaque sport, on scrape <strong>Oddsportal</strong> qui affiche les cotes de <strong>dizaines de bookmakers</strong> (Bet365, Pinnacle, Unibet, 1xBet...).</p>
+                        <p>Ces cotes forment un <strong>consensus multi-bookmakers</strong> : la moyenne ponderee de toutes les cotes disponibles donne une estimation fiable de la vraie probabilite.</p>
+                        <div class="methodo-tag-row">
+                            <span class="methodo-tag">Multi-bookmakers</span>
+                            <span class="methodo-tag">Consensus</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="methodo-card">
+                    <div class="methodo-card-header">
+                        <span class="methodo-step">3</span>
+                        De-vigging (suppression de la marge)
+                    </div>
+                    <div class="methodo-card-body">
+                        <p>Les bookmakers ajoutent une <strong>marge (vig)</strong> dans leurs cotes. Par exemple, sur un match 50/50, au lieu de proposer 2.00 des deux cotes ils affichent 1.90 / 1.90.</p>
+                        <p>On supprime cette marge par <strong>normalisation additive</strong> :</p>
+                        <div class="methodo-formula">
+                            P<sub>reelle</sub> = P<sub>implicite</sub> / &Sigma; P<sub>implicites</sub>
+                        </div>
+                        <p>Ce qui donne les <strong>probabilites reelles</strong> (fair probabilities) de chaque resultat.</p>
+                        <div class="methodo-tag-row">
+                            <span class="methodo-tag">Devigging additif</span>
+                            <span class="methodo-tag">Fair Probability</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="methodo-card">
+                    <div class="methodo-card-header">
+                        <span class="methodo-step">4</span>
+                        Calcul de l'Expected Value (EV)
+                    </div>
+                    <div class="methodo-card-body">
+                        <p>On compare la cote Winamax a la probabilite reelle. Si Winamax <strong>surpaye</strong> par rapport a la vraie probabilite, c'est un <strong>value bet</strong>.</p>
+                        <div class="methodo-formula">
+                            EV% = (P<sub>reelle</sub> &times; Cote<sub>winamax</sub> &minus; 1) &times; 100
+                        </div>
+                        <p><strong>EV > 0%</strong> = le pari a une esperance de gain positive a long terme.</p>
+                        <p class="methodo-example">Exemple : Cote Winamax = 2.10, Prob reelle = 52%<br>EV = (0.52 &times; 2.10 &minus; 1) &times; 100 = <strong>+9.2%</strong></p>
+                        <div class="methodo-tag-row">
+                            <span class="methodo-tag">Expected Value</span>
+                            <span class="methodo-tag">+EV = Profit long terme</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="methodo-card">
+                    <div class="methodo-card-header">
+                        <span class="methodo-step">5</span>
+                        Matching des equipes (Fuzzy)
+                    </div>
+                    <div class="methodo-card-body">
+                        <p>Les noms d'equipes different entre Winamax et Oddsportal (<em>"PSG" vs "Paris Saint-Germain"</em>, <em>"R. Madrid" vs "Real Madrid"</em>).</p>
+                        <p>On utilise un algorithme de <strong>similarite de sequences</strong> (SequenceMatcher) qui calcule un score de ressemblance. Au-dessus de <strong>55%</strong>, on considere que c'est le meme match.</p>
+                        <p>Les prefixes/suffixes courants (<em>FC, AC, SC, AS...</em>) sont retires pour ameliorer le matching.</p>
+                        <div class="methodo-tag-row">
+                            <span class="methodo-tag">Fuzzy matching</span>
+                            <span class="methodo-tag">SequenceMatcher</span>
+                            <span class="methodo-tag">Seuil 55%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="methodo-card">
+                    <div class="methodo-card-header">
+                        <span class="methodo-step">6</span>
+                        Sizing des mises (Kelly Criterion)
+                    </div>
+                    <div class="methodo-card-body">
+                        <p>Chaque pari est dimensionne avec le <strong>critere de Kelly</strong>, la formule optimale pour maximiser la croissance du bankroll :</p>
+                        <div class="methodo-formula">
+                            f* = (b&times;p &minus; q) / b
+                        </div>
+                        <p>Ou <em>b</em> = cote &minus; 1, <em>p</em> = probabilite de gain, <em>q</em> = 1 &minus; p.</p>
+                        <p>On applique un <strong>Quarter Kelly</strong> (25% du Kelly optimal) pour etre plus conservateur et reduire la variance.</p>
+                        <div class="methodo-params">
+                            <div class="methodo-param"><span>Kelly Fraction</span><strong>25%</strong></div>
+                            <div class="methodo-param"><span>Mise max / pari</span><strong>5% du bankroll</strong></div>
+                            <div class="methodo-param"><span>Mise minimum</span><strong>0.10 &euro;</strong></div>
+                        </div>
+                        <div class="methodo-tag-row">
+                            <span class="methodo-tag">Kelly Criterion</span>
+                            <span class="methodo-tag">Quarter Kelly</span>
+                            <span class="methodo-tag">Bankroll management</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="methodo-card">
+                    <div class="methodo-card-header">
+                        <span class="methodo-step">7</span>
+                        Filtres de qualite
+                    </div>
+                    <div class="methodo-card-body">
+                        <p>Avant de placer un pari, plusieurs filtres eliminent les faux positifs :</p>
+                        <div class="methodo-params">
+                            <div class="methodo-param"><span>EV minimum</span><strong>&ge; 1.0%</strong></div>
+                            <div class="methodo-param"><span>Bookmakers consensus</span><strong>&ge; 3 books</strong></div>
+                            <div class="methodo-param"><span>EV maximum (anti-erreur)</span><strong>&lt; 50%</strong></div>
+                            <div class="methodo-param"><span>Mise Kelly &gt; 0</span><strong>Sinon skip</strong></div>
+                        </div>
+                        <p>Un EV &gt; 50% est considere comme un probable <strong>mauvais matching</strong> d'equipes, pas un vrai value bet.</p>
+                        <div class="methodo-tag-row">
+                            <span class="methodo-tag">Anti faux-positif</span>
+                            <span class="methodo-tag">Deduplication</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="methodo-card">
+                    <div class="methodo-card-header">
+                        <span class="methodo-step">8</span>
+                        Suivi et settlement
+                    </div>
+                    <div class="methodo-card-body">
+                        <p>Chaque pari est enregistre dans un <strong>livre de compte</strong> (bankroll.json) avec toutes les infos : equipes, cote, mise, EV, timestamp.</p>
+                        <p>Apres le match, le systeme verifie automatiquement le <strong>resultat sur Winamax</strong> :</p>
+                        <ul class="methodo-list">
+                            <li><strong>Match pas commence</strong> &rarr; en attente</li>
+                            <li><strong>Match en cours</strong> (&lt; 2h) &rarr; en attente</li>
+                            <li><strong>Match termine</strong> &rarr; comparaison du score, pari resolu gagne/perdu</li>
+                            <li><strong>Match annule</strong> &rarr; mise remboursee (void)</li>
+                        </ul>
+                        <p>Le bankroll, ROI, win rate et P/L sont mis a jour en temps reel.</p>
+                        <div class="methodo-tag-row">
+                            <span class="methodo-tag">Auto-settlement</span>
+                            <span class="methodo-tag">P/L tracking</span>
+                            <span class="methodo-tag">JSON persistence</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="methodo-footer">
+                <div class="methodo-disclaimer">
+                    Ce systeme est un outil d'analyse statistique a but educatif. Il detecte des inefficiences dans les cotes mais <strong>ne garantit pas de profit</strong>.
+                    Les paris sportifs comportent des risques. Jouez de maniere responsable.
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters">
+        <div class="filter-group">
+            <span class="filter-label">Sport</span>
+            <select class="filter-select" id="filterSport" onchange="applyFilters()">
+                <option value="">Tous</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <span class="filter-label">EV Min</span>
+            <input type="number" class="filter-input" id="filterMinEv"
+                   value="0" step="0.5" min="0" onchange="applyFilters()">
+            <span class="filter-label">%</span>
+        </div>
+        <div class="filter-group">
+            <span class="filter-label">Cotes</span>
+            <input type="number" class="filter-input" id="filterMinOdds"
+                   value="" placeholder="Min" step="0.1" min="1" onchange="applyFilters()">
+            <span class="filter-label">—</span>
+            <input type="number" class="filter-input" id="filterMaxOdds"
+                   value="" placeholder="Max" step="0.1" min="1" onchange="applyFilters()">
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Sport</th>
+                    <th>Match</th>
+                    <th>Marche</th>
+                    <th>Pari</th>
+                    <th>Cote Winamax</th>
+                    <th>Prob. Reelle</th>
+                    <th>EV</th>
+                    <th>Books</th>
+                </tr>
+            </thead>
+            <tbody id="betsTable">
+                <!-- Rempli par JS -->
+            </tbody>
+        </table>
+
+        <!-- Empty State -->
+        <div class="empty-state" id="emptyState" style="display:none;">
+            <div class="empty-icon">&#9781;</div>
+            <div class="empty-title">Aucun value bet detecte</div>
+            <div class="empty-desc">
+                Le scanner analyse les cotes Winamax en continu.
+                Les paris EV+ apparaitront ici des qu'ils seront detectes.
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState">
+            <div class="skeleton-row">
+                <div class="skeleton-cell" style="width:80px"></div>
+                <div class="skeleton-cell" style="width:200px"></div>
+                <div class="skeleton-cell" style="width:60px"></div>
+                <div class="skeleton-cell" style="width:120px"></div>
+                <div class="skeleton-cell" style="width:60px"></div>
+                <div class="skeleton-cell" style="width:100px"></div>
+                <div class="skeleton-cell" style="width:80px"></div>
+            </div>
+            <div class="skeleton-row">
+                <div class="skeleton-cell" style="width:80px"></div>
+                <div class="skeleton-cell" style="width:180px"></div>
+                <div class="skeleton-cell" style="width:60px"></div>
+                <div class="skeleton-cell" style="width:140px"></div>
+                <div class="skeleton-cell" style="width:60px"></div>
+                <div class="skeleton-cell" style="width:90px"></div>
+                <div class="skeleton-cell" style="width:80px"></div>
+            </div>
+            <div class="skeleton-row">
+                <div class="skeleton-cell" style="width:80px"></div>
+                <div class="skeleton-cell" style="width:220px"></div>
+                <div class="skeleton-cell" style="width:60px"></div>
+                <div class="skeleton-cell" style="width:100px"></div>
+                <div class="skeleton-cell" style="width:60px"></div>
+                <div class="skeleton-cell" style="width:110px"></div>
+                <div class="skeleton-cell" style="width:80px"></div>
+            </div>
+        </div>
+    </div>
+
+<script>
+// ── State ──
+let allBets = [];
+let autoRefreshTimer = null;
+let scanPollTimer = null;
+
+// ── API Calls ──
+async function fetchValueBets() {
+    try {
+        const resp = await fetch('/api/valuebets');
+        const data = await resp.json();
+
+        updateStatus(data.status, data.error);
+        updateStats(data.stats);
+        updateLastUpdate(data.last_update);
+        updateScanPanel(data.status, data.progress, data.logs);
+
+        allBets = data.bets || [];
+        applyFilters();
+
+        populateSportFilter(allBets);
+
+        // Si scan en cours, poller plus vite
+        if (data.status === 'loading') {
+            startScanPolling();
+        } else {
+            stopScanPolling();
+        }
+
+    } catch (err) {
+        updateStatus('error', err.message);
+    }
+}
+
+function startScanPolling() {
+    if (scanPollTimer) return;
+    scanPollTimer = setInterval(async () => {
+        try {
+            const resp = await fetch('/api/status');
+            const data = await resp.json();
+            updateStatus(data.status, data.error);
+            updateScanPanel(data.status, data.progress, data.logs);
+
+            if (data.status !== 'loading') {
+                stopScanPolling();
+                fetchValueBets(); // Charger les resultats finaux
+            }
+        } catch (err) {}
+    }, 2000);
+}
+
+function stopScanPolling() {
+    if (scanPollTimer) {
+        clearInterval(scanPollTimer);
+        scanPollTimer = null;
+    }
+}
+
+function toggleMethodo() {
+    const body = document.getElementById('methodoBody');
+    const toggle = document.getElementById('methodoToggle');
+    if (body.style.display === 'none') {
+        body.style.display = 'block';
+        toggle.innerHTML = '&#9650;';
+    } else {
+        body.style.display = 'none';
+        toggle.innerHTML = '&#9660;';
+    }
+}
+
+async function forceRefresh() {
+    const btn = document.getElementById('btnRefresh');
+    btn.disabled = true;
+    btn.textContent = 'SCAN...';
+
+    try {
+        await fetch('/api/refresh', { method: 'POST' });
+        startScanPolling();
+        setTimeout(fetchValueBets, 1000);
+    } catch (err) {
+        btn.disabled = false;
+        btn.textContent = 'REFRESH';
+    }
+}
+
+// ── UI Updates ──
+function updateStatus(status, error) {
+    const dot = document.getElementById('statusDot');
+    const text = document.getElementById('statusText');
+    const btn = document.getElementById('btnRefresh');
+
+    dot.className = 'status-dot';
+
+    switch (status) {
+        case 'ready':
+            text.textContent = 'Actif';
+            btn.disabled = false;
+            btn.textContent = 'REFRESH';
+            break;
+        case 'loading':
+            dot.classList.add('loading');
+            text.textContent = 'Scan en cours...';
+            btn.disabled = true;
+            btn.textContent = 'SCAN...';
+            break;
+        case 'error':
+            dot.classList.add('error');
+            text.textContent = 'Erreur';
+            btn.disabled = false;
+            btn.textContent = 'REFRESH';
+            break;
+        default:
+            text.textContent = 'Initialisation...';
+    }
+}
+
+function updateScanPanel(status, progress, logs) {
+    const panel = document.getElementById('scanPanel');
+    const bar = document.getElementById('progressBarFill');
+    const percent = document.getElementById('scanPercent');
+    const logsDiv = document.getElementById('scanLogs');
+
+    if (status === 'loading') {
+        panel.style.display = 'block';
+        bar.style.width = (progress || 0) + '%';
+        percent.textContent = (progress || 0) + '%';
+
+        if (logs && logs.length > 0) {
+            logsDiv.innerHTML = logs.map((log, i) => {
+                const isLast = (i === logs.length - 1);
+                return `<div class="scan-log-entry ${isLast ? 'current' : 'done'}">`
+                    + `<span class="log-marker">${isLast ? '>' : '+'}</span> `
+                    + escHtml(log.msg)
+                    + '</div>';
+            }).join('');
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+    } else if (status === 'ready' && progress >= 100) {
+        // Montrer un bref message de succes puis cacher
+        bar.style.width = '100%';
+        percent.textContent = '100%';
+        if (logs && logs.length > 0) {
+            const lastMsg = logs[logs.length - 1].msg;
+            logsDiv.innerHTML = `<div class="scan-log-entry done"><span class="log-marker">+</span> ${escHtml(lastMsg)}</div>`;
+        }
+        setTimeout(() => { panel.style.display = 'none'; }, 3000);
+    } else if (status === 'error') {
+        panel.style.display = 'block';
+        bar.style.width = '0%';
+        bar.style.background = 'var(--accent-red)';
+        percent.textContent = 'ERREUR';
+        percent.style.color = 'var(--accent-red)';
+        if (logs && logs.length > 0) {
+            logsDiv.innerHTML = logs.map(log =>
+                `<div class="scan-log-entry done"><span class="log-marker">!</span> ${escHtml(log.msg)}</div>`
+            ).join('');
+        }
+    } else {
+        panel.style.display = 'none';
+    }
+}
+
+function updateStats(stats) {
+    if (!stats) return;
+
+    document.getElementById('statTotal').textContent = stats.total_bets || 0;
+    document.getElementById('statAvgEv').textContent =
+        stats.avg_ev ? `+${stats.avg_ev}%` : '—';
+    document.getElementById('statEvents').textContent = stats.total_events || 0;
+    document.getElementById('statTopSport').textContent = stats.top_sport || '—';
+}
+
+function updateLastUpdate(ts) {
+    if (!ts || ts === 0) return;
+
+    const date = new Date(ts * 1000);
+    const h = String(date.getHours()).padStart(2, '0');
+    const m = String(date.getMinutes()).padStart(2, '0');
+    const s = String(date.getSeconds()).padStart(2, '0');
+    document.getElementById('lastUpdate').textContent =
+        `Derniere MaJ : ${h}:${m}:${s}`;
+}
+
+function populateSportFilter(bets) {
+    const select = document.getElementById('filterSport');
+    const current = select.value;
+    const sports = [...new Set(bets.map(b => b.sport))].sort();
+
+    // Ne recréer que si la liste a changé
+    const existing = [...select.options].map(o => o.value).filter(v => v);
+    if (JSON.stringify(sports) === JSON.stringify(existing)) return;
+
+    select.innerHTML = '<option value="">Tous</option>';
+    sports.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s;
+        opt.textContent = s;
+        select.appendChild(opt);
+    });
+    select.value = current;
+}
+
+function applyFilters() {
+    const sport = document.getElementById('filterSport').value;
+    const minEv = parseFloat(document.getElementById('filterMinEv').value) || 0;
+    const minOdds = parseFloat(document.getElementById('filterMinOdds').value) || 0;
+    const maxOdds = parseFloat(document.getElementById('filterMaxOdds').value) || 999;
+
+    let filtered = allBets;
+
+    if (sport) {
+        filtered = filtered.filter(b => b.sport === sport);
+    }
+    if (minEv > 0) {
+        filtered = filtered.filter(b => b.ev_percent >= minEv);
+    }
+    if (minOdds > 0) {
+        filtered = filtered.filter(b => b.winamax_odds >= minOdds);
+    }
+    if (maxOdds < 999) {
+        filtered = filtered.filter(b => b.winamax_odds <= maxOdds);
+    }
+
+    renderTable(filtered);
+}
+
+function renderTable(bets) {
+    const tbody = document.getElementById('betsTable');
+    const loading = document.getElementById('loadingState');
+    const empty = document.getElementById('emptyState');
+
+    loading.style.display = 'none';
+
+    if (bets.length === 0) {
+        tbody.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+    }
+
+    empty.style.display = 'none';
+
+    tbody.innerHTML = bets.map(bet => {
+        // Classe EV
+        let evClass = 'ev-low';
+        if (bet.ev_percent >= 5) evClass = 'ev-high';
+        else if (bet.ev_percent >= 2) evClass = 'ev-medium';
+
+        // Barre de probabilité
+        const probWidth = Math.min(bet.fair_prob, 100) * 0.8;
+
+        return `
+        <tr>
+            <td><span class="sport-tag">${escHtml(bet.sport)}</span></td>
+            <td>
+                <div class="match-teams">
+                    <span class="team-home">${escHtml(bet.home)}</span>
+                    <span class="team-vs">vs</span>
+                    <span class="team-away">${escHtml(bet.away)}</span>
+                </div>
+            </td>
+            <td>${marketBadge(bet) || escHtml(bet.market)}</td>
+            <td><span class="bet-on">${escHtml(bet.bet_on)}</span></td>
+            <td><span class="odds-value">${bet.winamax_odds.toFixed(2)}</span></td>
+            <td>
+                <div class="prob-bar">
+                    <div class="prob-fill" style="width:${probWidth}px"></div>
+                    <span class="prob-text">${bet.fair_prob}%</span>
+                </div>
+            </td>
+            <td><span class="ev-badge ${evClass}">+${bet.ev_percent.toFixed(1)}%</span></td>
+            <td><span class="prob-text">${bet.num_books || '-'}</span></td>
+        </tr>`;
+    }).join('');
+}
+
+function escHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function marketBadge(bet) {
+    const t = bet.market_type;
+    if (t === 'over_under') {
+        const thr = bet.market_threshold != null ? bet.market_threshold : 2.5;
+        return `<span class="badge-market badge-ou">O/U ${thr}</span>`;
+    }
+    if (t === 'btts') {
+        return `<span class="badge-market badge-btts">BTTS</span>`;
+    }
+    return '';
+}
+
+// ── Bankroll ──
+async function fetchBankroll() {
+    try {
+        const resp = await fetch('/api/bankroll');
+        const data = await resp.json();
+        renderBankroll(data);
+    } catch (err) {
+        console.error('Bankroll fetch error:', err);
+    }
+}
+
+async function settleNow() {
+    const btn = document.querySelector('.btn-settle');
+    btn.textContent = 'CHECKING...';
+    btn.disabled = true;
+    btn.style.opacity = '0.6';
+
+    try {
+        const resp = await fetch('/api/bankroll/settle', { method: 'POST' });
+        const data = await resp.json();
+        fetchBankroll();
+        showSettleResults(data);
+    } catch (err) {
+        showToast('Erreur de connexion au serveur', 'error');
+    } finally {
+        btn.textContent = 'CHECK RESULTS';
+        btn.disabled = false;
+        btn.style.opacity = '1';
+    }
+}
+
+function showSettleResults(data) {
+    const reports = data.bet_reports || [];
+    if (reports.length === 0 && data.settled === 0 && data.still_pending === 0) {
+        showToast('Aucun pari en attente', 'info');
+        return;
+    }
+
+    const title = data.settled > 0
+        ? `${data.settled} pari(s) resolu(s)`
+        : `${data.still_pending} pari(s) en attente`;
+
+    let html = `<div class="toast-results">`;
+    html += `<div class="toast-results-header">${escHtml(title)}</div>`;
+    html += `<div class="toast-results-body">`;
+    for (const r of reports) {
+        let icon = '', cls = '';
+        switch (r.reason) {
+            case 'won':         icon = '\u2714'; cls = 'toast-won'; break;
+            case 'lost':        icon = '\u2718'; cls = 'toast-lost'; break;
+            case 'void':        icon = '\u2300'; cls = 'toast-void'; break;
+            case 'not_started': icon = '\u23F3'; cls = 'toast-wait'; break;
+            case 'in_progress': icon = '\u25B6'; cls = 'toast-progress'; break;
+            case 'error':       icon = '\u26A0'; cls = 'toast-line-error'; break;
+            default:            icon = '\u2022'; cls = 'toast-wait'; break;
+        }
+        html += `<div class="toast-bet-line ${cls}">
+            <span class="toast-icon">${icon}</span>
+            <span class="toast-match">${escHtml(r.match)}</span>
+            <span class="toast-sep">\u00B7</span>
+            <span class="toast-pari">${escHtml(r.bet_on)}</span>
+            <span class="toast-msg">${escHtml(r.message)}</span>
+        </div>`;
+    }
+    html += '</div>';
+    html += `<div class="toast-results-footer"><button onclick="this.closest('.toast').remove()">FERMER</button></div>`;
+    html += '</div>';
+
+    showToast(html, data.settled > 0 ? 'success' : 'info', 15000);
+}
+
+function showToast(content, type, duration) {
+    duration = duration || 4000;
+    let existing = document.getElementById('toastContainer');
+    if (!existing) {
+        existing = document.createElement('div');
+        existing.id = 'toastContainer';
+        document.body.appendChild(existing);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = 'toast toast-' + type;
+    toast.innerHTML = content;
+    existing.appendChild(toast);
+
+    requestAnimationFrame(() => toast.classList.add('toast-show'));
+    setTimeout(() => {
+        toast.classList.remove('toast-show');
+        toast.classList.add('toast-hide');
+        setTimeout(() => toast.remove(), 400);
+    }, duration);
+}
+
+async function resetBankroll() {
+    if (!confirm('Reinitialiser la bankroll a 100 EUR ? Tout l\'historique sera perdu.')) return;
+    try {
+        await fetch('/api/bankroll/reset', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({amount: 100}) });
+        fetchBankroll();
+    } catch (err) {
+        console.error('Reset error:', err);
+    }
+}
+
+function renderBankroll(data) {
+    if (!data) return;
+
+    // KPIs
+    const bankroll = data.current_bankroll ?? 100;
+    const profit = data.total_profit ?? 0;
+    const roi = data.roi ?? 0;
+    const winRate = data.win_rate ?? 0;
+    const totalBets = data.total_bets ?? 0;
+    const pending = data.pending_bets ?? 0;
+
+    document.getElementById('kpiBankroll').textContent = bankroll.toFixed(2) + ' \u20AC';
+    const profitEl = document.getElementById('kpiProfit');
+    profitEl.textContent = (profit >= 0 ? '+' : '') + profit.toFixed(2) + ' \u20AC';
+    profitEl.className = 'kpi-value ' + (profit >= 0 ? 'green' : 'red');
+
+    const roiEl = document.getElementById('kpiRoi');
+    roiEl.textContent = (roi >= 0 ? '+' : '') + roi.toFixed(1) + '%';
+    roiEl.className = 'kpi-value ' + (roi >= 0 ? 'green' : 'red');
+
+    const wrEl = document.getElementById('kpiWinRate');
+    wrEl.textContent = winRate.toFixed(1) + '%';
+    wrEl.className = 'kpi-value ' + (winRate >= 50 ? 'green' : winRate > 0 ? 'yellow' : '');
+
+    document.getElementById('kpiTotalBets').textContent = totalBets;
+    document.getElementById('kpiPending').textContent = pending;
+
+    // Chart
+    renderPLChart(data.pl_history || []);
+
+    // Ledger
+    renderLedger(data.recent_bets || []);
+}
+
+function renderPLChart(history) {
+    const canvas = document.getElementById('plChart');
+    const emptyMsg = document.getElementById('chartEmpty');
+    const ctx = canvas.getContext('2d');
+
+    // Responsive canvas
+    const container = canvas.parentElement;
+    canvas.width = container.clientWidth - 40;
+    canvas.height = 200;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (!history || history.length < 2) {
+        canvas.style.display = 'none';
+        emptyMsg.style.display = 'block';
+        return;
+    }
+
+    canvas.style.display = 'block';
+    emptyMsg.style.display = 'none';
+
+    const values = history.map(h => h.pl);
+    const minVal = Math.min(0, ...values);
+    const maxVal = Math.max(0, ...values);
+    const range = maxVal - minVal || 1;
+
+    const pad = { top: 20, right: 20, bottom: 30, left: 60 };
+    const w = canvas.width - pad.left - pad.right;
+    const h = canvas.height - pad.top - pad.bottom;
+
+    // Zero line Y
+    const zeroY = pad.top + h * (maxVal / range);
+
+    // Grid lines
+    ctx.strokeStyle = 'rgba(48, 54, 61, 0.6)';
+    ctx.lineWidth = 1;
+    const gridSteps = 4;
+    for (let i = 0; i <= gridSteps; i++) {
+        const y = pad.top + (h / gridSteps) * i;
+        ctx.beginPath();
+        ctx.moveTo(pad.left, y);
+        ctx.lineTo(pad.left + w, y);
+        ctx.stroke();
+
+        // Label
+        const val = maxVal - (range / gridSteps) * i;
+        ctx.fillStyle = '#484f58';
+        ctx.font = '10px Share Tech Mono';
+        ctx.textAlign = 'right';
+        ctx.fillText(val.toFixed(1) + '\u20AC', pad.left - 8, y + 4);
+    }
+
+    // Zero line
+    ctx.strokeStyle = 'rgba(139, 148, 158, 0.4)';
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(pad.left, zeroY);
+    ctx.lineTo(pad.left + w, zeroY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Points
+    const points = history.map((h, i) => ({
+        x: pad.left + (w / (history.length - 1)) * i,
+        y: pad.top + h * ((maxVal - h.pl) / range)
+    }));
+    // Recalc y properly
+    for (let i = 0; i < history.length; i++) {
+        points[i].y = pad.top + ((maxVal - values[i]) / range) * h;
+    }
+
+    // Fill area
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, zeroY);
+    for (const p of points) ctx.lineTo(p.x, p.y);
+    ctx.lineTo(points[points.length - 1].x, zeroY);
+    ctx.closePath();
+
+    const lastVal = values[values.length - 1];
+    if (lastVal >= 0) {
+        const grad = ctx.createLinearGradient(0, pad.top, 0, pad.top + h);
+        grad.addColorStop(0, 'rgba(63, 185, 80, 0.25)');
+        grad.addColorStop(1, 'rgba(63, 185, 80, 0.02)');
+        ctx.fillStyle = grad;
+    } else {
+        const grad = ctx.createLinearGradient(0, pad.top, 0, pad.top + h);
+        grad.addColorStop(0, 'rgba(248, 81, 73, 0.02)');
+        grad.addColorStop(1, 'rgba(248, 81, 73, 0.25)');
+        ctx.fillStyle = grad;
+    }
+    ctx.fill();
+
+    // Line
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
+    ctx.strokeStyle = lastVal >= 0 ? '#3fb950' : '#f85149';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Last point dot
+    const last = points[points.length - 1];
+    ctx.beginPath();
+    ctx.arc(last.x, last.y, 4, 0, Math.PI * 2);
+    ctx.fillStyle = lastVal >= 0 ? '#3fb950' : '#f85149';
+    ctx.fill();
+    ctx.strokeStyle = '#0d1117';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Date labels (first and last)
+    ctx.fillStyle = '#484f58';
+    ctx.font = '10px Share Tech Mono';
+    ctx.textAlign = 'center';
+    if (history[0].date) {
+        ctx.fillText(history[0].date, points[0].x, canvas.height - 5);
+    }
+    if (history.length > 1 && history[history.length - 1].date) {
+        ctx.fillText(history[history.length - 1].date, last.x, canvas.height - 5);
+    }
+}
+
+function renderLedger(bets) {
+    const pending  = (bets || []).filter(b => b.status === 'pending');
+    const settled  = (bets || []).filter(b => b.status !== 'pending');
+
+    const tbodyP = document.getElementById('ledgerPending');
+    const tbodyS = document.getElementById('ledgerSettled');
+
+    const emptyP = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:24px;">Aucun pari en cours</td></tr>';
+    const emptyS = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:24px;">Aucun pari terminé</td></tr>';
+
+    function betRow(bet, showPotential) {
+        const date = new Date(bet.placed_at * 1000);
+        const dateStr = String(date.getDate()).padStart(2,'0') + '/'
+                      + String(date.getMonth()+1).padStart(2,'0') + ' '
+                      + String(date.getHours()).padStart(2,'0') + ':'
+                      + String(date.getMinutes()).padStart(2,'0');
+
+        let statusBadge = '';
+        if (bet.status === 'pending')     statusBadge = '<span class="badge-pending">EN ATTENTE</span>';
+        else if (bet.status === 'won')    statusBadge = '<span class="badge-won">GAGNE</span>';
+        else if (bet.status === 'lost')   statusBadge = '<span class="badge-lost">PERDU</span>';
+        else if (bet.status === 'void')   statusBadge = '<span class="badge-void">VOID</span>';
+
+        let lastCol, lastClass = '';
+        if (showPotential) {
+            const ret = (bet.potential_return || 0).toFixed(2);
+            lastCol = `+${ret} \u20AC`;
+            lastClass = 'green';
+        } else {
+            if (bet.profit !== null && bet.profit !== undefined) {
+                lastCol = (bet.profit >= 0 ? '+' : '') + bet.profit.toFixed(2) + ' \u20AC';
+                lastClass = bet.profit >= 0 ? 'green' : 'red';
+            } else {
+                lastCol = '-';
+            }
+        }
+
+        return `<tr>
+            <td>${dateStr}</td>
+            <td>${escHtml(bet.home)} vs ${escHtml(bet.away)}</td>
+            <td>${escHtml(bet.bet_on)} ${marketBadge(bet)}</td>
+            <td class="odds-value">${(bet.winamax_odds || 0).toFixed(2)}</td>
+            <td>${(bet.stake || 0).toFixed(2)} \u20AC</td>
+            <td><span class="ev-badge ev-low">+${(bet.ev_percent || 0).toFixed(1)}%</span></td>
+            <td>${statusBadge}</td>
+            <td class="${lastClass}">${lastCol}</td>
+        </tr>`;
+    }
+
+    tbodyP.innerHTML = pending.length  ? pending.map(b  => betRow(b, true)).join('')  : emptyP;
+    tbodyS.innerHTML = settled.length  ? settled.map(b  => betRow(b, false)).join('') : emptyS;
+}
+
+// ── Init ──
+document.addEventListener('DOMContentLoaded', () => {
+    fetchValueBets();
+    fetchBankroll();
+
+    // Auto-refresh toutes les 60 secondes
+    autoRefreshTimer = setInterval(() => {
+        fetchValueBets();
+        fetchBankroll();
+    }, 60000);
+});
+</script>
+
+</body>
+</html>
