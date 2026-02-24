@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EV+ FINDER — Value Bets Winamax</title>
+    <title>EV+ FINDER — Winamax Value Bet Scanner</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -11,16 +11,19 @@
     <!-- Header -->
     <header class="header">
         <div class="header-left">
-            <div>
-                <div class="logo">EV+ FINDER</div>
-                <div class="logo-sub">Winamax Value Bet Scanner</div>
+            <div class="logo">
+                <div class="logo-icon">⚡</div>
+                <div>
+                    <div class="logo-text">EV+ FINDER</div>
+                    <div class="logo-sub">Winamax Value Bet Scanner</div>
+                </div>
             </div>
         </div>
         <div class="header-right">
             <span class="last-update" id="lastUpdate">—</span>
             <div class="status-badge">
                 <span class="status-dot" id="statusDot"></span>
-                <span id="statusText">Chargement...</span>
+                <span id="statusText">Loading...</span>
             </div>
             <button class="btn-refresh" id="btnRefresh" onclick="forceRefresh()">
                 REFRESH
@@ -35,11 +38,11 @@
             <div class="stat-value green" id="statTotal">—</div>
         </div>
         <div class="stat-card">
-            <div class="stat-label">EV Moyen</div>
+            <div class="stat-label">Avg. EV</div>
             <div class="stat-value yellow" id="statAvgEv">—</div>
         </div>
         <div class="stat-card">
-            <div class="stat-label">Evenements</div>
+            <div class="stat-label">Events</div>
             <div class="stat-value" id="statEvents">—</div>
         </div>
         <div class="stat-card">
@@ -56,7 +59,7 @@
         <div class="scan-header">
             <div class="scan-title">
                 <span class="scan-icon">&#9881;</span>
-                SCAN EN COURS
+                SCANNING
             </div>
             <span class="scan-percent" id="scanPercent">0%</span>
         </div>
@@ -64,7 +67,7 @@
             <div class="progress-bar-fill" id="progressBarFill" style="width:0%"></div>
         </div>
         <div class="scan-logs" id="scanLogs">
-            <div class="scan-log-entry waiting">En attente du demarrage...</div>
+            <div class="scan-log-entry waiting">Waiting for scan to start...</div>
         </div>
     </div>
 
@@ -77,17 +80,17 @@
             </div>
             <div class="bankroll-actions">
                 <button class="btn-settle" onclick="settleNow()">CHECK RESULTS</button>
-                <a class="btn-export" href="/api/bankroll/export" download>EXPORT CSV</a>
+                <a class="btn-export" href="/api/bankroll/export" download>EXPORT</a>
                 <button class="btn-reset" onclick="resetBankroll()">RESET</button>
             </div>
         </div>
         <div class="bankroll-kpis">
             <div class="kpi-card">
-                <div class="kpi-label">Solde Actuel</div>
+                <div class="kpi-label">Balance</div>
                 <div class="kpi-value" id="kpiBankroll">100.00 &euro;</div>
             </div>
             <div class="kpi-card">
-                <div class="kpi-label">P/L Total</div>
+                <div class="kpi-label">Total P/L</div>
                 <div class="kpi-value" id="kpiProfit">0.00 &euro;</div>
             </div>
             <div class="kpi-card">
@@ -99,35 +102,35 @@
                 <div class="kpi-value" id="kpiWinRate">0.0%</div>
             </div>
             <div class="kpi-card">
-                <div class="kpi-label">Paris Places</div>
+                <div class="kpi-label">Total Bets</div>
                 <div class="kpi-value" id="kpiTotalBets">0</div>
             </div>
             <div class="kpi-card">
-                <div class="kpi-label">En Attente</div>
+                <div class="kpi-label">Pending</div>
                 <div class="kpi-value yellow" id="kpiPending">0</div>
             </div>
         </div>
         <div class="chart-container">
-            <div class="chart-title">Evolution du Profit / Loss</div>
+            <div class="chart-title">Profit / Loss History</div>
             <canvas id="plChart" width="800" height="200"></canvas>
             <div class="chart-empty" id="chartEmpty">
-                Pas encore de paris resolus. Le graphique apparaitra apres le premier resultat.
+                No settled bets yet. The chart will appear after the first result.
             </div>
         </div>
         <div class="ledger-container">
-            <div class="ledger-title">Paris en cours</div>
+            <div class="ledger-title">Active Bets</div>
             <div class="ledger-scroll">
                 <table class="ledger-table">
                     <thead>
                         <tr>
                             <th>Date</th>
                             <th>Match</th>
-                            <th>Pari</th>
-                            <th>Cote</th>
-                            <th>Mise</th>
+                            <th>Bet</th>
+                            <th>Odds</th>
+                            <th>Stake</th>
                             <th>EV</th>
-                            <th>Statut</th>
-                            <th>Retour potentiel</th>
+                            <th>Status</th>
+                            <th>Potential Return</th>
                         </tr>
                     </thead>
                     <tbody id="ledgerPending"></tbody>
@@ -135,18 +138,18 @@
             </div>
         </div>
         <div class="ledger-container" style="margin-top:16px;">
-            <div class="ledger-title">Historique (terminés)</div>
+            <div class="ledger-title">Settled History</div>
             <div class="ledger-scroll">
                 <table class="ledger-table">
                     <thead>
                         <tr>
                             <th>Date</th>
                             <th>Match</th>
-                            <th>Pari</th>
-                            <th>Cote</th>
-                            <th>Mise</th>
+                            <th>Bet</th>
+                            <th>Odds</th>
+                            <th>Stake</th>
                             <th>EV</th>
-                            <th>Statut</th>
+                            <th>Status</th>
                             <th>P/L</th>
                         </tr>
                     </thead>
@@ -161,7 +164,7 @@
         <div class="methodo-header" onclick="toggleMethodo()">
             <div class="methodo-title">
                 <span class="section-icon">&#9432;</span>
-                COMMENT CA MARCHE
+                HOW IT WORKS
             </div>
             <span class="methodo-toggle" id="methodoToggle">&#9660;</span>
         </div>
@@ -172,11 +175,11 @@
                 <div class="methodo-card">
                     <div class="methodo-card-header">
                         <span class="methodo-step">1</span>
-                        Scraping des cotes Winamax
+                        Winamax Odds Scraping
                     </div>
                     <div class="methodo-card-body">
-                        <p>Un navigateur Chrome headless charge la page <strong>paris-sportifs Winamax</strong> et extrait automatiquement tous les evenements et leurs cotes en temps reel.</p>
-                        <p>Les donnees extraites incluent : <em>equipes, cotes decimales, marche (1X2), match ID, heure de debut</em>.</p>
+                        <p>A headless Chrome browser loads the <strong>Winamax sportsbook</strong> and automatically extracts all events and their odds in real time.</p>
+                        <p>Extracted data includes: <em>teams, decimal odds, market (1X2 / O&amp;U / BTTS), match ID, kick-off time</em>.</p>
                         <div class="methodo-tag-row">
                             <span class="methodo-tag">Selenium</span>
                             <span class="methodo-tag">Chrome Headless</span>
@@ -188,11 +191,11 @@
                 <div class="methodo-card">
                     <div class="methodo-card-header">
                         <span class="methodo-step">2</span>
-                        Cotes de reference (Oddsportal)
+                        Reference Odds (Oddsportal)
                     </div>
                     <div class="methodo-card-body">
-                        <p>Pour chaque sport, on scrape <strong>Oddsportal</strong> qui affiche les cotes de <strong>dizaines de bookmakers</strong> (Bet365, Pinnacle, Unibet, 1xBet...).</p>
-                        <p>Ces cotes forment un <strong>consensus multi-bookmakers</strong> : la moyenne ponderee de toutes les cotes disponibles donne une estimation fiable de la vraie probabilite.</p>
+                        <p>For each sport we scrape <strong>Oddsportal</strong>, which aggregates odds from <strong>dozens of bookmakers</strong> (Bet365, Pinnacle, Unibet, 1xBet…).</p>
+                        <p>These form a <strong>multi-book consensus</strong>: the weighted average across all available odds gives a reliable estimate of the true probability.</p>
                         <div class="methodo-tag-row">
                             <span class="methodo-tag">Multi-bookmakers</span>
                             <span class="methodo-tag">Consensus</span>
@@ -203,17 +206,17 @@
                 <div class="methodo-card">
                     <div class="methodo-card-header">
                         <span class="methodo-step">3</span>
-                        De-vigging (suppression de la marge)
+                        De-vigging (margin removal)
                     </div>
                     <div class="methodo-card-body">
-                        <p>Les bookmakers ajoutent une <strong>marge (vig)</strong> dans leurs cotes. Par exemple, sur un match 50/50, au lieu de proposer 2.00 des deux cotes ils affichent 1.90 / 1.90.</p>
-                        <p>On supprime cette marge par <strong>normalisation additive</strong> :</p>
+                        <p>Bookmakers embed a <strong>margin (vig)</strong> in their odds. On a true 50/50 event they offer 1.90 / 1.90 instead of 2.00 / 2.00.</p>
+                        <p>We strip this margin using <strong>additive normalisation</strong>:</p>
                         <div class="methodo-formula">
-                            P<sub>reelle</sub> = P<sub>implicite</sub> / &Sigma; P<sub>implicites</sub>
+                            P<sub>fair</sub> = P<sub>implied</sub> / &Sigma; P<sub>implied</sub>
                         </div>
-                        <p>Ce qui donne les <strong>probabilites reelles</strong> (fair probabilities) de chaque resultat.</p>
+                        <p>This yields the <strong>true (fair) probability</strong> of each outcome.</p>
                         <div class="methodo-tag-row">
-                            <span class="methodo-tag">Devigging additif</span>
+                            <span class="methodo-tag">Additive devig</span>
                             <span class="methodo-tag">Fair Probability</span>
                         </div>
                     </div>
@@ -222,18 +225,18 @@
                 <div class="methodo-card">
                     <div class="methodo-card-header">
                         <span class="methodo-step">4</span>
-                        Calcul de l'Expected Value (EV)
+                        Expected Value (EV) Calculation
                     </div>
                     <div class="methodo-card-body">
-                        <p>On compare la cote Winamax a la probabilite reelle. Si Winamax <strong>surpaye</strong> par rapport a la vraie probabilite, c'est un <strong>value bet</strong>.</p>
+                        <p>We compare the Winamax odds to the true probability. If Winamax <strong>overpays</strong> relative to the fair odds, it's a <strong>value bet</strong>.</p>
                         <div class="methodo-formula">
-                            EV% = (P<sub>reelle</sub> &times; Cote<sub>winamax</sub> &minus; 1) &times; 100
+                            EV% = (P<sub>fair</sub> &times; Odds<sub>winamax</sub> &minus; 1) &times; 100
                         </div>
-                        <p><strong>EV > 0%</strong> = le pari a une esperance de gain positive a long terme.</p>
-                        <p class="methodo-example">Exemple : Cote Winamax = 2.10, Prob reelle = 52%<br>EV = (0.52 &times; 2.10 &minus; 1) &times; 100 = <strong>+9.2%</strong></p>
+                        <p><strong>EV &gt; 0%</strong> = the bet has a positive long-term expected return.</p>
+                        <p class="methodo-example">Example: Winamax odds = 2.10, true prob = 52%<br>EV = (0.52 &times; 2.10 &minus; 1) &times; 100 = <strong>+9.2%</strong></p>
                         <div class="methodo-tag-row">
                             <span class="methodo-tag">Expected Value</span>
-                            <span class="methodo-tag">+EV = Profit long terme</span>
+                            <span class="methodo-tag">+EV = Long-term profit</span>
                         </div>
                     </div>
                 </div>
@@ -241,16 +244,16 @@
                 <div class="methodo-card">
                     <div class="methodo-card-header">
                         <span class="methodo-step">5</span>
-                        Matching des equipes (Fuzzy)
+                        Team Name Matching (Fuzzy)
                     </div>
                     <div class="methodo-card-body">
-                        <p>Les noms d'equipes different entre Winamax et Oddsportal (<em>"PSG" vs "Paris Saint-Germain"</em>, <em>"R. Madrid" vs "Real Madrid"</em>).</p>
-                        <p>On utilise un algorithme de <strong>similarite de sequences</strong> (SequenceMatcher) qui calcule un score de ressemblance. Au-dessus de <strong>55%</strong>, on considere que c'est le meme match.</p>
-                        <p>Les prefixes/suffixes courants (<em>FC, AC, SC, AS...</em>) sont retires pour ameliorer le matching.</p>
+                        <p>Team names differ between Winamax and Oddsportal (<em>"PSG" vs "Paris Saint-Germain"</em>, <em>"R. Madrid" vs "Real Madrid"</em>).</p>
+                        <p>We use a <strong>sequence similarity</strong> algorithm (SequenceMatcher) to score resemblance. Above <strong>55%</strong> similarity we consider it the same match.</p>
+                        <p>Common prefixes/suffixes (<em>FC, AC, SC, AS…</em>) are stripped to improve matching accuracy.</p>
                         <div class="methodo-tag-row">
                             <span class="methodo-tag">Fuzzy matching</span>
                             <span class="methodo-tag">SequenceMatcher</span>
-                            <span class="methodo-tag">Seuil 55%</span>
+                            <span class="methodo-tag">55% threshold</span>
                         </div>
                     </div>
                 </div>
@@ -258,19 +261,19 @@
                 <div class="methodo-card">
                     <div class="methodo-card-header">
                         <span class="methodo-step">6</span>
-                        Sizing des mises (Kelly Criterion)
+                        Stake Sizing (Kelly Criterion)
                     </div>
                     <div class="methodo-card-body">
-                        <p>Chaque pari est dimensionne avec le <strong>critere de Kelly</strong>, la formule optimale pour maximiser la croissance du bankroll :</p>
+                        <p>Each bet is sized using the <strong>Kelly Criterion</strong>, the mathematically optimal formula for maximising bankroll growth:</p>
                         <div class="methodo-formula">
                             f* = (b&times;p &minus; q) / b
                         </div>
-                        <p>Ou <em>b</em> = cote &minus; 1, <em>p</em> = probabilite de gain, <em>q</em> = 1 &minus; p.</p>
-                        <p>On applique un <strong>Quarter Kelly</strong> (25% du Kelly optimal) pour etre plus conservateur et reduire la variance.</p>
+                        <p>Where <em>b</em> = odds &minus; 1, <em>p</em> = win probability, <em>q</em> = 1 &minus; p.</p>
+                        <p>We apply <strong>Quarter Kelly</strong> (25% of full Kelly) for a more conservative, lower-variance approach.</p>
                         <div class="methodo-params">
-                            <div class="methodo-param"><span>Kelly Fraction</span><strong>25%</strong></div>
-                            <div class="methodo-param"><span>Mise max / pari</span><strong>5% du bankroll</strong></div>
-                            <div class="methodo-param"><span>Mise minimum</span><strong>0.10 &euro;</strong></div>
+                            <div class="methodo-param"><span>Kelly fraction</span><strong>25%</strong></div>
+                            <div class="methodo-param"><span>Max stake / bet</span><strong>5% of bankroll</strong></div>
+                            <div class="methodo-param"><span>Minimum stake</span><strong>0.10 &euro;</strong></div>
                         </div>
                         <div class="methodo-tag-row">
                             <span class="methodo-tag">Kelly Criterion</span>
@@ -283,19 +286,19 @@
                 <div class="methodo-card">
                     <div class="methodo-card-header">
                         <span class="methodo-step">7</span>
-                        Filtres de qualite
+                        Quality Filters
                     </div>
                     <div class="methodo-card-body">
-                        <p>Avant de placer un pari, plusieurs filtres eliminent les faux positifs :</p>
+                        <p>Before placing a bet, several filters eliminate false positives:</p>
                         <div class="methodo-params">
-                            <div class="methodo-param"><span>EV minimum</span><strong>&ge; 1.0%</strong></div>
-                            <div class="methodo-param"><span>Bookmakers consensus</span><strong>&ge; 3 books</strong></div>
-                            <div class="methodo-param"><span>EV maximum (anti-erreur)</span><strong>&lt; 50%</strong></div>
-                            <div class="methodo-param"><span>Mise Kelly &gt; 0</span><strong>Sinon skip</strong></div>
+                            <div class="methodo-param"><span>Minimum EV</span><strong>&ge; 1.0%</strong></div>
+                            <div class="methodo-param"><span>Bookmaker consensus</span><strong>&ge; 3 books</strong></div>
+                            <div class="methodo-param"><span>Maximum EV (anti-error)</span><strong>&lt; 50%</strong></div>
+                            <div class="methodo-param"><span>Kelly stake &gt; 0</span><strong>Otherwise skip</strong></div>
                         </div>
-                        <p>Un EV &gt; 50% est considere comme un probable <strong>mauvais matching</strong> d'equipes, pas un vrai value bet.</p>
+                        <p>An EV &gt; 50% is treated as a probable <strong>matching error</strong>, not a genuine value bet.</p>
                         <div class="methodo-tag-row">
-                            <span class="methodo-tag">Anti faux-positif</span>
+                            <span class="methodo-tag">Anti false-positive</span>
                             <span class="methodo-tag">Deduplication</span>
                         </div>
                     </div>
@@ -304,18 +307,18 @@
                 <div class="methodo-card">
                     <div class="methodo-card-header">
                         <span class="methodo-step">8</span>
-                        Suivi et settlement
+                        Tracking &amp; Auto-Settlement
                     </div>
                     <div class="methodo-card-body">
-                        <p>Chaque pari est enregistre dans un <strong>livre de compte</strong> (bankroll.json) avec toutes les infos : equipes, cote, mise, EV, timestamp.</p>
-                        <p>Apres le match, le systeme verifie automatiquement le <strong>resultat sur Winamax</strong> :</p>
+                        <p>Every bet is logged in a <strong>ledger</strong> (bankroll.json) with all details: teams, odds, stake, EV, timestamp.</p>
+                        <p>After the match, the system automatically checks the <strong>result via Winamax / ESPN</strong>:</p>
                         <ul class="methodo-list">
-                            <li><strong>Match pas commence</strong> &rarr; en attente</li>
-                            <li><strong>Match en cours</strong> (&lt; 2h) &rarr; en attente</li>
-                            <li><strong>Match termine</strong> &rarr; comparaison du score, pari resolu gagne/perdu</li>
-                            <li><strong>Match annule</strong> &rarr; mise remboursee (void)</li>
+                            <li><strong>Not started yet</strong> &rarr; pending</li>
+                            <li><strong>In progress</strong> (&lt; 2h elapsed) &rarr; pending</li>
+                            <li><strong>Finished</strong> &rarr; score parsed, bet settled won/lost</li>
+                            <li><strong>Cancelled</strong> &rarr; stake refunded (void)</li>
                         </ul>
-                        <p>Le bankroll, ROI, win rate et P/L sont mis a jour en temps reel.</p>
+                        <p>Bankroll, ROI, win rate and P/L update in real time.</p>
                         <div class="methodo-tag-row">
                             <span class="methodo-tag">Auto-settlement</span>
                             <span class="methodo-tag">P/L tracking</span>
@@ -328,8 +331,8 @@
 
             <div class="methodo-footer">
                 <div class="methodo-disclaimer">
-                    Ce systeme est un outil d'analyse statistique a but educatif. Il detecte des inefficiences dans les cotes mais <strong>ne garantit pas de profit</strong>.
-                    Les paris sportifs comportent des risques. Jouez de maniere responsable.
+                    This tool is a statistical analysis system for educational purposes. It identifies inefficiencies in bookmaker odds but <strong>does not guarantee profit</strong>.
+                    Sports betting carries financial risk. Please gamble responsibly.
                 </div>
             </div>
 
@@ -341,7 +344,7 @@
         <div class="filter-group">
             <span class="filter-label">Sport</span>
             <select class="filter-select" id="filterSport" onchange="applyFilters()">
-                <option value="">Tous</option>
+                <option value="">All</option>
             </select>
         </div>
         <div class="filter-group">
@@ -351,7 +354,7 @@
             <span class="filter-label">%</span>
         </div>
         <div class="filter-group">
-            <span class="filter-label">Cotes</span>
+            <span class="filter-label">Odds</span>
             <input type="number" class="filter-input" id="filterMinOdds"
                    value="" placeholder="Min" step="0.1" min="1" onchange="applyFilters()">
             <span class="filter-label">—</span>
@@ -367,10 +370,10 @@
                 <tr>
                     <th>Sport</th>
                     <th>Match</th>
-                    <th>Marche</th>
-                    <th>Pari</th>
-                    <th>Cote Winamax</th>
-                    <th>Prob. Reelle</th>
+                    <th>Market</th>
+                    <th>Bet</th>
+                    <th>Winamax Odds</th>
+                    <th>True Prob.</th>
                     <th>EV</th>
                     <th>Books</th>
                 </tr>
@@ -383,10 +386,10 @@
         <!-- Empty State -->
         <div class="empty-state" id="emptyState" style="display:none;">
             <div class="empty-icon">&#9781;</div>
-            <div class="empty-title">Aucun value bet detecte</div>
+            <div class="empty-title">No value bets detected</div>
             <div class="empty-desc">
-                Le scanner analyse les cotes Winamax en continu.
-                Les paris EV+ apparaitront ici des qu'ils seront detectes.
+                The scanner continuously analyses Winamax odds.
+                EV+ bets will appear here as soon as they are found.
             </div>
         </div>
 
@@ -517,24 +520,24 @@ function updateStatus(status, error) {
 
     switch (status) {
         case 'ready':
-            text.textContent = 'Actif';
+            text.textContent = 'Live';
             btn.disabled = false;
             btn.textContent = 'REFRESH';
             break;
         case 'loading':
             dot.classList.add('loading');
-            text.textContent = 'Scan en cours...';
+            text.textContent = 'Scanning...';
             btn.disabled = true;
-            btn.textContent = 'SCAN...';
+            btn.textContent = 'SCANNING';
             break;
         case 'error':
             dot.classList.add('error');
-            text.textContent = 'Erreur';
+            text.textContent = 'Error';
             btn.disabled = false;
-            btn.textContent = 'REFRESH';
+            btn.textContent = 'RETRY';
             break;
         default:
-            text.textContent = 'Initialisation...';
+            text.textContent = 'Initialising...';
     }
 }
 
@@ -729,7 +732,7 @@ async function fetchBankroll() {
 
 async function settleNow() {
     const btn = document.querySelector('.btn-settle');
-    btn.textContent = 'CHECKING...';
+    btn.textContent = 'CHECKING';
     btn.disabled = true;
     btn.style.opacity = '0.6';
 
@@ -750,13 +753,13 @@ async function settleNow() {
 function showSettleResults(data) {
     const reports = data.bet_reports || [];
     if (reports.length === 0 && data.settled === 0 && data.still_pending === 0) {
-        showToast('Aucun pari en attente', 'info');
+        showToast('No pending bets', 'info');
         return;
     }
 
     const title = data.settled > 0
-        ? `${data.settled} pari(s) resolu(s)`
-        : `${data.still_pending} pari(s) en attente`;
+        ? `${data.settled} bet(s) settled`
+        : `${data.still_pending} bet(s) still pending`;
 
     let html = `<div class="toast-results">`;
     html += `<div class="toast-results-header">${escHtml(title)}</div>`;
@@ -767,8 +770,8 @@ function showSettleResults(data) {
             case 'won':         icon = '\u2714'; cls = 'toast-won'; break;
             case 'lost':        icon = '\u2718'; cls = 'toast-lost'; break;
             case 'void':        icon = '\u2300'; cls = 'toast-void'; break;
-            case 'not_started': icon = '\u23F3'; cls = 'toast-wait'; break;
-            case 'in_progress': icon = '\u25B6'; cls = 'toast-progress'; break;
+            case 'not_started': icon = '⏳'; cls = 'toast-wait'; break;
+            case 'in_progress': icon = '▶'; cls = 'toast-progress'; break;
             case 'error':       icon = '\u26A0'; cls = 'toast-line-error'; break;
             default:            icon = '\u2022'; cls = 'toast-wait'; break;
         }
@@ -781,7 +784,7 @@ function showSettleResults(data) {
         </div>`;
     }
     html += '</div>';
-    html += `<div class="toast-results-footer"><button onclick="this.closest('.toast').remove()">FERMER</button></div>`;
+    html += `<div class="toast-results-footer"><button onclick="this.closest('.toast').remove()">CLOSE</button></div>`;
     html += '</div>';
 
     showToast(html, data.settled > 0 ? 'success' : 'info', 15000);
@@ -810,7 +813,7 @@ function showToast(content, type, duration) {
 }
 
 async function resetBankroll() {
-    if (!confirm('Reinitialiser la bankroll a 100 EUR ? Tout l\'historique sera perdu.')) return;
+    if (!confirm('Reset bankroll to 100 EUR? All history will be lost.')) return;
     try {
         await fetch('/api/bankroll/reset', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({amount: 100}) });
         fetchBankroll();
@@ -982,8 +985,8 @@ function renderLedger(bets) {
     const tbodyP = document.getElementById('ledgerPending');
     const tbodyS = document.getElementById('ledgerSettled');
 
-    const emptyP = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:24px;">Aucun pari en cours</td></tr>';
-    const emptyS = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:24px;">Aucun pari terminé</td></tr>';
+    const emptyP = '<tr><td colspan="8" style="text-align:center;color:var(--text-3);padding:24px;font-size:12px;">No active bets</td></tr>';
+    const emptyS = '<tr><td colspan="8" style="text-align:center;color:var(--text-3);padding:24px;font-size:12px;">No settled bets yet</td></tr>';
 
     function betRow(bet, showPotential) {
         const date = new Date(bet.placed_at * 1000);
@@ -993,9 +996,9 @@ function renderLedger(bets) {
                       + String(date.getMinutes()).padStart(2,'0');
 
         let statusBadge = '';
-        if (bet.status === 'pending')     statusBadge = '<span class="badge-pending">EN ATTENTE</span>';
-        else if (bet.status === 'won')    statusBadge = '<span class="badge-won">GAGNE</span>';
-        else if (bet.status === 'lost')   statusBadge = '<span class="badge-lost">PERDU</span>';
+        if (bet.status === 'pending')     statusBadge = '<span class="badge-pending">PENDING</span>';
+        else if (bet.status === 'won')    statusBadge = '<span class="badge-won">WON</span>';
+        else if (bet.status === 'lost')   statusBadge = '<span class="badge-lost">LOST</span>';
         else if (bet.status === 'void')   statusBadge = '<span class="badge-void">VOID</span>';
 
         let lastCol, lastClass = '';
